@@ -3,31 +3,35 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
-import { Sparkles, Loader2, ChevronDown, ChevronUp, MapPin, Clock, Utensils, Lock } from "lucide-react"
+import { Sparkles, Loader2, Clock, Lightbulb, Lock, Sun, Sunset, Moon } from "lucide-react"
 
 interface AIItineraryProps {
   destination: string
   dates: { start: string; end: string }
 }
 
+interface DayActivity {
+  time: string
+  place: string
+  description: string
+  duration: string
+}
+
 interface ItineraryDay {
   day: number
   date: string
-  attractions: string[]
-  restaurants: string[]
-  startTime: string
-  endTime: string
-  description: string
+  morning: DayActivity
+  afternoon: DayActivity
+  evening: DayActivity
+  localTips: string[]
 }
 
 export function AIItinerary({ destination, dates }: AIItineraryProps) {
   const { user } = useAuth()
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set())
   const { toast } = useToast()
 
   const generateItinerary = async () => {
@@ -68,7 +72,6 @@ export function AIItinerary({ destination, dates }: AIItineraryProps) {
 
       const data = await response.json()
       setItinerary(data.itinerary)
-      setExpandedDays(new Set([1])) // Expand first day by default
 
       toast({
         title: "AI Itinerary Generated! ✨",
@@ -86,16 +89,6 @@ export function AIItinerary({ destination, dates }: AIItineraryProps) {
     }
   }
 
-  const toggleDay = (day: number) => {
-    const newExpanded = new Set(expandedDays)
-    if (newExpanded.has(day)) {
-      newExpanded.delete(day)
-    } else {
-      newExpanded.add(day)
-    }
-    setExpandedDays(newExpanded)
-  }
-
   const getDayDuration = () => {
     const start = new Date(dates.start)
     const end = new Date(dates.end)
@@ -103,12 +96,34 @@ export function AIItinerary({ destination, dates }: AIItineraryProps) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
   }
 
+  const getTimeIcon = (timeOfDay: "morning" | "afternoon" | "evening") => {
+    switch (timeOfDay) {
+      case "morning":
+        return <Sun className="w-5 h-5 text-yellow-500" />
+      case "afternoon":
+        return <Sunset className="w-5 h-5 text-orange-500" />
+      case "evening":
+        return <Moon className="w-5 h-5 text-purple-500" />
+    }
+  }
+
+  const getTimeColor = (timeOfDay: "morning" | "afternoon" | "evening") => {
+    switch (timeOfDay) {
+      case "morning":
+        return "from-yellow-100 to-orange-100 border-yellow-200"
+      case "afternoon":
+        return "from-orange-100 to-red-100 border-orange-200"
+      case "evening":
+        return "from-purple-100 to-blue-100 border-purple-200"
+    }
+  }
+
   return (
     <Card className="gradient-card border border-white/20 shadow-2xl rounded-3xl overflow-hidden animate-slide-up">
       <CardHeader className="bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 text-white p-4 sm:p-6">
         <CardTitle className="flex items-center space-x-2 sm:space-x-3">
           <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="text-base sm:text-xl">AI-Powered Itinerary</span>
+          <span className="text-base sm:text-xl">AI-Powered Daily Itinerary</span>
           {!user && <Lock className="w-4 h-4 sm:w-5 sm:h-5 opacity-75" />}
         </CardTitle>
       </CardHeader>
@@ -120,8 +135,8 @@ export function AIItinerary({ destination, dates }: AIItineraryProps) {
             </div>
             <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 sm:mb-3">AI Travel Assistant</h3>
             <p className="text-gray-600 mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base px-2">
-              Get a personalized {getDayDuration()}-day itinerary for {destination} with attractions, restaurants, and
-              perfect timing suggestions.
+              Get a personalized {getDayDuration()}-day itinerary for {destination} with morning, afternoon, and evening
+              activities plus local tips.
             </p>
             <Button
               onClick={generateItinerary}
@@ -133,7 +148,7 @@ export function AIItinerary({ destination, dates }: AIItineraryProps) {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 animate-spin" />
-                  AI is planning your trip...
+                  AI is planning your perfect days...
                 </>
               ) : !user ? (
                 <>
@@ -143,98 +158,112 @@ export function AIItinerary({ destination, dates }: AIItineraryProps) {
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" />
-                  Generate Smart Itinerary
+                  Generate Daily Itinerary
                 </>
               )}
             </Button>
           </div>
         ) : (
-          <div className="space-y-3 sm:space-y-4 max-h-[500px] sm:max-h-[600px] overflow-y-auto">
+          <div className="space-y-6 max-h-[600px] overflow-y-auto">
             {itinerary.map((day) => (
-              <Collapsible key={day.day} open={expandedDays.has(day.day)} onOpenChange={() => toggleDay(day.day)}>
-                <CollapsibleTrigger asChild>
-                  <Card className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-purple-200">
-                    <div className="p-3 sm:p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3 sm:space-x-4">
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 gradient-bg rounded-xl flex items-center justify-center text-white font-bold text-sm sm:text-base">
-                            {day.day}
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-gray-800 text-base sm:text-lg">Day {day.day}</h4>
-                            <p className="text-gray-600 text-xs sm:text-sm">
-                              {new Date(day.date).toLocaleDateString("en-US", {
-                                weekday: "long",
-                                month: "long",
-                                day: "numeric",
-                              })}
-                            </p>
-                          </div>
+              <Card key={day.day} className="border-2 border-gray-100 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white p-4">
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white font-bold">
+                        {day.day}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-lg">Day {day.day}</h4>
+                        <p className="text-white/80 text-sm">
+                          {new Date(day.date).toLocaleDateString("en-US", {
+                            weekday: "long",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="p-0">
+                  {/* Morning Activity */}
+                  <div className={`bg-gradient-to-r ${getTimeColor("morning")} border-b-2 p-4`}>
+                    <div className="flex items-start space-x-3">
+                      {getTimeIcon("morning")}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-bold text-gray-800">Morning</h5>
+                          <span className="text-sm font-medium text-gray-600">{day.morning.time}</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="text-right text-xs sm:text-sm text-gray-500">
-                            <p>
-                              {day.startTime} - {day.endTime}
-                            </p>
-                          </div>
-                          {expandedDays.has(day.day) ? (
-                            <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                          )}
+                        <h6 className="font-semibold text-gray-800 mb-1">{day.morning.place}</h6>
+                        <p className="text-gray-700 text-sm mb-2">{day.morning.description}</p>
+                        <div className="flex items-center space-x-2 text-xs text-gray-600">
+                          <Clock className="w-3 h-3" />
+                          <span>{day.morning.duration}</span>
                         </div>
                       </div>
                     </div>
-                  </Card>
-                </CollapsibleTrigger>
+                  </div>
 
-                <CollapsibleContent className="mt-2">
-                  <Card className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 border border-purple-100">
-                    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                      <p className="text-gray-700 leading-relaxed text-sm sm:text-base">{day.description}</p>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                        <div className="space-y-2 sm:space-y-3">
-                          <div className="flex items-center space-x-2">
-                            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
-                            <h5 className="font-semibold text-gray-800 text-sm sm:text-base">Top Attractions</h5>
-                          </div>
-                          <ul className="space-y-1 sm:space-y-2">
-                            {day.attractions.map((attraction, index) => (
-                              <li key={index} className="flex items-center space-x-2">
-                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-400 rounded-full"></div>
-                                <span className="text-gray-700 text-xs sm:text-sm">{attraction}</span>
-                              </li>
-                            ))}
-                          </ul>
+                  {/* Afternoon Activity */}
+                  <div className={`bg-gradient-to-r ${getTimeColor("afternoon")} border-b-2 p-4`}>
+                    <div className="flex items-start space-x-3">
+                      {getTimeIcon("afternoon")}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-bold text-gray-800">Afternoon</h5>
+                          <span className="text-sm font-medium text-gray-600">{day.afternoon.time}</span>
                         </div>
-
-                        <div className="space-y-2 sm:space-y-3">
-                          <div className="flex items-center space-x-2">
-                            <Utensils className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500" />
-                            <h5 className="font-semibold text-gray-800 text-sm sm:text-base">Recommended Dining</h5>
-                          </div>
-                          <ul className="space-y-1 sm:space-y-2">
-                            {day.restaurants.map((restaurant, index) => (
-                              <li key={index} className="flex items-center space-x-2">
-                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-pink-400 rounded-full"></div>
-                                <span className="text-gray-700 text-xs sm:text-sm">{restaurant}</span>
-                              </li>
-                            ))}
-                          </ul>
+                        <h6 className="font-semibold text-gray-800 mb-1">{day.afternoon.place}</h6>
+                        <p className="text-gray-700 text-sm mb-2">{day.afternoon.description}</p>
+                        <div className="flex items-center space-x-2 text-xs text-gray-600">
+                          <Clock className="w-3 h-3" />
+                          <span>{day.afternoon.duration}</span>
                         </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 bg-white/50 rounded-xl p-2 sm:p-3">
-                        <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span>
-                          Suggested timing: {day.startTime} - {day.endTime}
-                        </span>
                       </div>
                     </div>
-                  </Card>
-                </CollapsibleContent>
-              </Collapsible>
+                  </div>
+
+                  {/* Evening Activity */}
+                  <div className={`bg-gradient-to-r ${getTimeColor("evening")} border-b-2 p-4`}>
+                    <div className="flex items-start space-x-3">
+                      {getTimeIcon("evening")}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-bold text-gray-800">Evening</h5>
+                          <span className="text-sm font-medium text-gray-600">{day.evening.time}</span>
+                        </div>
+                        <h6 className="font-semibold text-gray-800 mb-1">{day.evening.place}</h6>
+                        <p className="text-gray-700 text-sm mb-2">{day.evening.description}</p>
+                        <div className="flex items-center space-x-2 text-xs text-gray-600">
+                          <Clock className="w-3 h-3" />
+                          <span>{day.evening.duration}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Local Tips */}
+                  <div className="bg-gradient-to-r from-green-50 to-teal-50 border-green-200 p-4">
+                    <div className="flex items-start space-x-3">
+                      <Lightbulb className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div className="flex-1">
+                        <h5 className="font-bold text-gray-800 mb-2">Local Tips</h5>
+                        <ul className="space-y-1">
+                          {day.localTips.map((tip, index) => (
+                            <li key={index} className="text-gray-700 text-sm flex items-start space-x-2">
+                              <span className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2 flex-shrink-0"></span>
+                              <span>{tip}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

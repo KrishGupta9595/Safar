@@ -96,7 +96,7 @@ export function AuthForm() {
           title: "Account created! 🚀",
           description: "Welcome to Roam List! Redirecting to dashboard...",
         })
-        // Auto-login and redirect to dashboard
+        // Auto-login and redirect to dashboard - user is automatically signed in after signup
         router.push("/dashboard")
       }
     } catch (error) {

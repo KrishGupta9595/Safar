@@ -4,7 +4,20 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Hotel, Star, Wifi, Car, Coffee, ExternalLink, Loader2, Utensils, Dumbbell, Waves } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Hotel,
+  Star,
+  Wifi,
+  Car,
+  Coffee,
+  ExternalLink,
+  Loader2,
+  Utensils,
+  Dumbbell,
+  Waves,
+  ArrowUpDown,
+} from "lucide-react"
 import { ErrorAlert } from "@/components/error-alert"
 import { PriceRangeSlider } from "@/components/price-range-slider"
 
@@ -32,6 +45,8 @@ export function HotelCard({ destination, dates }: HotelCardProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000])
+  const [sortBy, setSortBy] = useState("rating")
+  const [sortOrder, setSortOrder] = useState("desc")
 
   // Separate state for price bounds to prevent loops
   const [priceBounds, setPriceBounds] = useState<{ min: number; max: number }>({ min: 0, max: 50000 })
@@ -54,7 +69,7 @@ export function HotelCard({ destination, dates }: HotelCardProps) {
 
       try {
         const response = await fetch(
-          `/api/hotels?destination=${encodeURIComponent(destination)}&checkin=${dates.start}&checkout=${dates.end}&page=${page}&limit=6`,
+          `/api/hotels?destination=${encodeURIComponent(destination)}&checkin=${dates.start}&checkout=${dates.end}&page=${page}&limit=6&sortBy=${sortBy}&sortOrder=${sortOrder}`,
         )
 
         if (!response.ok) {
@@ -105,13 +120,13 @@ export function HotelCard({ destination, dates }: HotelCardProps) {
         setIsLoadingMore(false)
       }
     },
-    [destination, dates.start, dates.end],
+    [destination, dates.start, dates.end, sortBy, sortOrder],
   )
 
   // Effect to fetch hotels when search parameters change
   useEffect(() => {
     fetchHotels(1, true)
-  }, [searchKey, fetchHotels])
+  }, [searchKey, sortBy, sortOrder, fetchHotels])
 
   // Memoize filtered hotels to prevent unnecessary recalculations
   const filteredHotels = useMemo(() => {
@@ -127,6 +142,15 @@ export function HotelCard({ destination, dates }: HotelCardProps) {
       }
       return prevRange
     })
+  }, [])
+
+  // Handle sorting changes
+  const handleSortChange = useCallback((newSortBy: string) => {
+    setSortBy(newSortBy)
+  }, [])
+
+  const handleSortOrderToggle = useCallback(() => {
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
   }, [])
 
   // Handle load more - memoized to prevent loops
@@ -219,6 +243,32 @@ export function HotelCard({ destination, dates }: HotelCardProps) {
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
           {error && <ErrorAlert title="Unable to load hotel data" message={error} onClose={handleCloseError} />}
+
+          {/* Sorting Controls */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-gray-700">Sort by:</span>
+              <Select value={sortBy} onValueChange={handleSortChange}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rating">Rating</SelectItem>
+                  <SelectItem value="price">Price</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSortOrderToggle}
+              className="flex items-center space-x-2 bg-transparent"
+            >
+              <ArrowUpDown className="w-4 h-4" />
+              <span>{sortOrder === "asc" ? "Low to High" : "High to Low"}</span>
+            </Button>
+          </div>
 
           <div className="space-y-4 max-h-[500px] sm:max-h-[600px] overflow-y-auto">
             {filteredHotels.map((hotel) => (

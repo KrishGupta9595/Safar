@@ -20,6 +20,7 @@ interface Attraction {
   details: string
   address: string
   coordinates?: { lat: number; lng: number }
+  image?: string
 }
 
 export function AttractionCard({ destination }: AttractionCardProps) {
@@ -74,6 +75,10 @@ export function AttractionCard({ destination }: AttractionCardProps) {
         return "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800"
       case "shopping":
         return "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800"
+      case "religious":
+        return "bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800"
+      case "entertainment":
+        return "bg-gradient-to-r from-pink-100 to-rose-100 text-pink-800"
       default:
         return "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800"
     }
@@ -106,7 +111,7 @@ export function AttractionCard({ destination }: AttractionCardProps) {
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
           <div className="animate-pulse space-y-4">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="h-16 sm:h-20 bg-gray-200 rounded-xl"></div>
             ))}
           </div>
@@ -118,9 +123,14 @@ export function AttractionCard({ destination }: AttractionCardProps) {
   return (
     <Card className="gradient-card border border-white/20 shadow-2xl rounded-3xl overflow-hidden animate-slide-up">
       <CardHeader className="bg-gradient-to-r from-green-500 to-teal-500 text-white p-4 sm:p-6">
-        <CardTitle className="flex items-center space-x-2 sm:space-x-3">
-          <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="text-base sm:text-xl">Top Attractions in {destination}</span>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-base sm:text-xl">Top Attractions in {destination}</span>
+          </div>
+          <Badge variant="secondary" className="bg-white/20 text-white text-xs sm:text-sm">
+            {attractions.length} places
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
@@ -132,17 +142,33 @@ export function AttractionCard({ destination }: AttractionCardProps) {
               key={attraction.id}
               className="bg-white rounded-2xl border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden animate-fade-in"
             >
+              {attraction.image && (
+                <div className="h-32 sm:h-40 bg-gray-200 rounded-t-2xl overflow-hidden">
+                  <img
+                    src={attraction.image || "/placeholder.svg"}
+                    alt={attraction.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = `/placeholder.svg?height=160&width=400&text=${encodeURIComponent(attraction.name)}`
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4 mb-3">
                   <h4 className="font-bold text-gray-800 text-base sm:text-lg">{attraction.name}</h4>
                   <div className="flex items-center space-x-1">
                     <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current" />
                     <span className="text-xs sm:text-sm font-semibold text-gray-700">{attraction.rating}</span>
+                    <span className="text-xs text-gray-500">({Math.floor(attraction.rating * 150)} reviews)</span>
                   </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-3">
-                  <Badge className={`${getCategoryColor(attraction.category)} text-xs`}>{attraction.category}</Badge>
+                  <Badge className={`${getCategoryColor(attraction.category)} text-xs w-fit`}>
+                    {attraction.category}
+                  </Badge>
                   <div className="flex items-center space-x-1 text-gray-500">
                     <MapPin className="w-3 h-3" />
                     <span className="text-xs truncate">{attraction.address}</span>
@@ -153,7 +179,7 @@ export function AttractionCard({ destination }: AttractionCardProps) {
 
                 {expandedId === attraction.id && (
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 sm:p-4 mb-3 animate-fade-in">
-                    <p className="text-gray-700 text-sm sm:text-base">{attraction.details}</p>
+                    <p className="text-gray-700 text-sm sm:text-base leading-relaxed">{attraction.details}</p>
                   </div>
                 )}
 

@@ -1,10 +1,12 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { Luggage, Loader2, Lock, Sparkles, Check } from "lucide-react"
+import { Luggage, Loader2, Lock, Sparkles, Check, Shirt, FileText, Heart, Cloud } from "lucide-react"
 
 interface PackingListCardProps {
   destination: string
@@ -13,8 +15,15 @@ interface PackingListCardProps {
   onAuthRequired?: () => void
 }
 
+interface PackingCategory {
+  name: string
+  icon: React.ReactNode
+  color: string
+  items: string[]
+}
+
 export function PackingListCard({ destination, dates, disabled = false, onAuthRequired }: PackingListCardProps) {
-  const [packingList, setPackingList] = useState<any>(null)
+  const [packingList, setPackingList] = useState<PackingCategory[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
   const { toast } = useToast()
@@ -27,43 +36,31 @@ export function PackingListCard({ destination, dates, disabled = false, onAuthRe
 
     setIsLoading(true)
     try {
-      // Simulate Gemini API call
-      await new Promise((resolve) => setTimeout(resolve, 2500))
-
-      // Mock packing list data
-      setPackingList({
-        essentials: [
-          "Passport/ID documents",
-          "Travel insurance papers",
-          "Phone charger & power bank",
-          "Medications & first aid",
-          "Comfortable walking shoes",
-          "Sunglasses & hat",
-        ],
-        clothing: [
-          "Light cotton t-shirts",
-          "Comfortable jeans/pants",
-          "Light jacket for evenings",
-          "Underwear & socks",
-          "Sleepwear",
-          "Swimwear (if applicable)",
-        ],
-        accessories: [
-          "Small backpack for day trips",
-          "Camera or smartphone",
-          "Portable charger",
-          "Travel adapter",
-          "Reusable water bottle",
-          "Travel pillow",
-        ],
-        weatherSpecific: ["Umbrella (rainy season)", "Sunscreen SPF 30+", "Insect repellent", "Light scarf"],
+      const response = await fetch("/api/generate-packing-list", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          destination,
+          startDate: dates.start,
+          endDate: dates.end,
+        }),
       })
 
+      if (!response.ok) {
+        throw new Error("Failed to generate packing list")
+      }
+
+      const data = await response.json()
+      setPackingList(data.categories)
+
       toast({
-        title: "Packing list generated! ✨",
+        title: "Smart Packing List Generated! ✨",
         description: "Your AI-powered packing list is ready based on weather and destination.",
       })
     } catch (error) {
+      console.error("Packing list generation error:", error)
       toast({
         title: "Error",
         description: "Failed to generate packing list. Please try again.",
@@ -84,33 +81,22 @@ export function PackingListCard({ destination, dates, disabled = false, onAuthRe
     setCheckedItems(newCheckedItems)
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "essentials":
-        return "from-red-500 to-pink-500"
-      case "clothing":
-        return "from-blue-500 to-cyan-500"
-      case "accessories":
-        return "from-green-500 to-teal-500"
-      case "weatherSpecific":
-        return "from-orange-500 to-yellow-500"
-      default:
-        return "from-gray-500 to-gray-600"
-    }
+  const getTotalItems = () => {
+    return packingList.reduce((total, category) => total + category.items.length, 0)
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "essentials":
-        return "🎯"
+  const getCategoryIcon = (categoryName: string) => {
+    switch (categoryName.toLowerCase()) {
       case "clothing":
-        return "👕"
-      case "accessories":
-        return "🎒"
-      case "weatherSpecific":
-        return "🌤️"
+        return <Shirt className="w-5 h-5" />
+      case "documents":
+        return <FileText className="w-5 h-5" />
+      case "essentials":
+        return <Heart className="w-5 h-5" />
+      case "weather-specific":
+        return <Cloud className="w-5 h-5" />
       default:
-        return "📋"
+        return <Luggage className="w-5 h-5" />
     }
   }
 
@@ -119,20 +105,19 @@ export function PackingListCard({ destination, dates, disabled = false, onAuthRe
       <CardHeader className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 sm:p-6">
         <CardTitle className="flex items-center space-x-2 sm:space-x-3">
           <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="text-base sm:text-xl">AI Packing List</span>
+          <span className="text-base sm:text-xl">Smart Packing Assistant</span>
           {disabled && <Lock className="w-4 h-4 sm:w-5 sm:h-5 opacity-75" />}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
-        {!packingList ? (
+        {!packingList.length ? (
           <div className="text-center py-8 sm:py-12">
             <div className="w-16 h-16 sm:w-20 sm:h-20 gradient-bg rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
               <Luggage className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 sm:mb-3">Smart Packing Assistant</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 sm:mb-3">AI-Powered Packing List</h3>
             <p className="text-gray-600 mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base px-2">
-              Generate a personalized packing list powered by AI, based on your destination's weather, culture, and trip
-              duration.
+              Generate a personalized packing list for {destination} based on weather, activities, and trip duration.
             </p>
             <Button
               onClick={generatePackingList}
@@ -144,7 +129,7 @@ export function PackingListCard({ destination, dates, disabled = false, onAuthRe
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 animate-spin" />
-                  AI is thinking...
+                  AI is analyzing your trip...
                 </>
               ) : disabled ? (
                 <>
@@ -154,7 +139,7 @@ export function PackingListCard({ destination, dates, disabled = false, onAuthRe
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" />
-                  Generate Smart List
+                  Generate Smart Packing List
                 </>
               )}
             </Button>
@@ -165,30 +150,28 @@ export function PackingListCard({ destination, dates, disabled = false, onAuthRe
               <div className="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-3 sm:px-4 py-2 rounded-full text-sm">
                 <Check className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="font-medium">
-                  {checkedItems.size} of {Object.values(packingList).flat().length} items packed
+                  {checkedItems.size} of {getTotalItems()} items packed
                 </span>
               </div>
             </div>
 
             <div className="max-h-[400px] sm:max-h-[500px] overflow-y-auto space-y-4 sm:space-y-6">
-              {Object.entries(packingList).map(([category, items]) => (
-                <div key={category} className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100">
+              {packingList.map((category, categoryIndex) => (
+                <div key={categoryIndex} className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100">
                   <div className="flex items-center space-x-3 mb-3 sm:mb-4">
                     <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r ${getCategoryColor(category)} rounded-xl flex items-center justify-center text-white text-sm sm:text-lg`}
+                      className={`w-8 h-8 sm:w-10 sm:h-10 ${category.color} rounded-xl flex items-center justify-center text-white`}
                     >
-                      {getCategoryIcon(category)}
+                      {getCategoryIcon(category.name)}
                     </div>
                     <div>
-                      <h4 className="font-bold text-gray-800 capitalize text-sm sm:text-base">
-                        {category.replace(/([A-Z])/g, " $1").trim()}
-                      </h4>
-                      <p className="text-xs sm:text-sm text-gray-500">{(items as string[]).length} items</p>
+                      <h4 className="font-bold text-gray-800 text-sm sm:text-base">{category.name}</h4>
+                      <p className="text-xs sm:text-sm text-gray-500">{category.items.length} items</p>
                     </div>
                   </div>
 
                   <ul className="space-y-2 sm:space-y-3">
-                    {(items as string[]).map((item, index) => (
+                    {category.items.map((item, index) => (
                       <li key={index} className="flex items-center space-x-2 sm:space-x-3">
                         <button
                           onClick={() => toggleItem(item)}
